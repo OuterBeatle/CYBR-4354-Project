@@ -91,14 +91,43 @@ if category_options:
 else:
     st.info('No recognized categorical columns available.')
 
-st.subheader('Visualization 2: Trend by submission year')
+st.subheader('Visualization 2: Report counts by state')
+if state_col:
+    state_counts = (
+        work[state_col]
+        .dropna()
+        .astype(str)
+        .str.strip()
+        .str.upper()
+        .value_counts()
+        .rename_axis('State')
+        .reset_index(name='Reports')
+    )
+    if state_counts.empty:
+        st.info('No state values are available for the selected filters.')
+    else:
+        state_map = px.choropleth(
+            state_counts,
+            locations='State',
+            locationmode='USA-states',
+            color='Reports',
+            scope='usa',
+            color_continuous_scale='Reds',
+            labels={'Reports': 'Reports', 'State': 'State'},
+            title='Number of reported breaches by state',
+        )
+        st.plotly_chart(state_map, use_container_width=True)
+else:
+    st.info('A State column is needed for this visualization.')
+
+st.subheader('Visualization 3: Trend by submission year')
 if date_col:
     trend = work.groupby('_year').size().reset_index(name='Reports').sort_values('_year')
     st.plotly_chart(px.line(trend, x='_year', y='Reports', markers=True, title='Breach reports by submission year', labels={'_year':'Year'}), use_container_width=True)
 else:
     st.info('A submission date column is needed for this chart.')
 
-st.subheader('Visualization 3: Scale of reported breaches')
+st.subheader('Visualization 4: Scale of reported breaches')
 if count_col:
     valid = work[work['_affected'].notna()]
     st.plotly_chart(px.histogram(valid, x='_affected', nbins=30, title='Distribution of individuals affected', labels={'_affected':'Individuals affected'}), use_container_width=True)
@@ -106,6 +135,10 @@ else:
     st.info('An Individuals Affected column is needed for this chart.')
 
 st.subheader('Explore records')
+st.dataframe(work.drop(columns=[c for c in ['_date','_year','_affected'] if c in work], errors='ignore'), use_container_width=True)
+st.download_button('Download filtered data (CSV)', data=work.drop(columns=[c for c in ['_date','_year','_affected'] if c in work], errors='ignore').to_csv(index=False).encode('utf-8'), file_name='filtered_hhs_breaches.csv', mime='text/csv')
+st.info('For your final project: select the two most relevant interactive features and three visualizations, and explain how they answer your assigned risk management question. Do not infer causal relationships or breach probabilities from report counts.')
+
 st.dataframe(work.drop(columns=[c for c in ['_date','_year','_affected'] if c in work], errors='ignore'), use_container_width=True)
 st.download_button('Download filtered data (CSV)', data=work.drop(columns=[c for c in ['_date','_year','_affected'] if c in work], errors='ignore').to_csv(index=False).encode('utf-8'), file_name='filtered_hhs_breaches.csv', mime='text/csv')
 st.info('For your final project: select the two most relevant interactive features and three visualizations, and explain how they answer your assigned risk management question. Do not infer causal relationships or breach probabilities from report counts.')
